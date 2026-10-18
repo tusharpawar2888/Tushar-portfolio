@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: tushar-creative-portfolio
+    runtime: static
+    buildCommand: echo "Static site - no build required"
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: true
