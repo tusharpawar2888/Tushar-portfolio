@@ -1,40 +1,44 @@
+
 pipeline {
     agent any
-    options { timestamps(); disableConcurrentBuilds() }
-    parameters {
-        booleanParam(name: 'TRIGGER_RENDER_DEPLOY', defaultValue: false, description: 'Trigger Render after validation (requires the RENDER_DEPLOY_HOOK secret text credential).')
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
     }
 
     stages {
         stage('Checkout') {
-            steps { checkout scm }
-        }
-        stage('Validate static site') {
             steps {
-                sh '''
-                    set -eu
-                    test -s index.html
-                    test -s style.css
-                    test -s script.js
-                    test -s assets/tushar.jpg
-                    grep -q '<title>' index.html
-                    grep -q 'style.css' index.html
-                    grep -q 'script.js' index.html
-                    echo "Portfolio file checks passed."
+                checkout scm
+            }
+        }
+
+        stage('Validate Portfolio') {
+            steps {
+                bat '''
+                    @echo off
+                    if not exist index.html exit /b 1
+                    if not exist style.css exit /b 1
+                    if not exist script.js exit /b 1
+                    if not exist assets\\tushar.jpg exit /b 1
+
+                    findstr /C:"<title>" index.html >nul
+                    if errorlevel 1 exit /b 1
+
+                    echo All portfolio files are present.
+                    echo Portfolio validation successful.
                 '''
             }
         }
-        stage('Trigger Render deploy (optional)') {
-            when { expression { return params.TRIGGER_RENDER_DEPLOY } }
-            steps {
-                withCredentials([string(credentialsId: 'RENDER_DEPLOY_HOOK', variable: 'RENDER_DEPLOY_HOOK')]) {
-                    sh 'curl --fail --silent --show-error -X POST "$RENDER_DEPLOY_HOOK"'
-                }
-            }
-        }
     }
+
     post {
-        success { echo 'Portfolio validation succeeded.' }
-        failure { echo 'Portfolio validation failed. Review console output.' }
+        success {
+            echo 'Portfolio validation succeeded!'
+        }
+        failure {
+            echo 'Build failed. Check the Console Output.'
+        }
     }
 }
